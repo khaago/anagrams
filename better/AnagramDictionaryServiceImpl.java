@@ -2,34 +2,49 @@ import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * The service is considered as an enum in order to easily enforce it's singleton-ness.
- * A dictionary file must be loaded with the loadDictionary(String path)
- */
-public enum Service {
-    INSTANCE;
-    // Internal database of the anagrams: key = prime hash of words, value = list of words that have the same prime hash
+public class AnagramDictionaryServiceImpl implements AnagramDictionaryService {
     private static final ConcurrentHashMap<Long, List<String>> data = new ConcurrentHashMap<>();
     private static final List<Integer> primes = generatePrimes();
 
+    private final MetricService metricService;
 
-    private static void internalAddWord(long hash, String word) {
-        if (data.containsKey(hash)) {
-            data.get(hash).add(word);
-        } else {
-            List<String> list = new LinkedList<>();
-            list.add(word);
-            data.put(hash, Collections.synchronizedList(list));
-        }
+    public AnagramDictionaryServiceImpl() {
+        this.metricService = new MetricServiceImpl();
     }
 
-    public static void loadDictionary(String dictFilePath) throws IOException {
+    public AnagramDictionary createDictionary(String filePath, Properties dict) {
+        metricService.logStartTime();
+        try {
+            loadDictionary(filePath);
+        } catch (IOException e) {
+            e.printStackTrace(); //TODO
+        }
+        AnagramDictionary anagramDictionary = new AnagramDictionary();
+        String id = UUID.randomUUID().toString();
+        anagramDictionary.setId(id);
+        anagramDictionary.setName(dict.getOrDefault("dictionary.name", "dictionary-" + id).toString());
+        metricService.logEndTime();
+        metricService.printDuration("Dictionary loaded in");
+        return anagramDictionary;
+    }
+
+    public void addToDictionary(String word) {
+        long hash = getPrimeHash(word);
+        internalAddWord(hash, word);
+    }
+
+    public List<String> getAnagrams(String word) {
+        return getAnagrams(getPrimeHash(word));
+    }
+
+    public List<String> getAnagrams(long hash) {
+        return data.get(hash);
+    }
+
+    private void loadDictionary(String dictFilePath) throws IOException {
         try (InputStream is = new BufferedInputStream(new FileInputStream(dictFilePath))) {
             int c;
             long product = 1;   // this will be the prime key
@@ -56,8 +71,14 @@ public enum Service {
         }
     }
 
-    public static List<String> getAnagrams(String word) {
-        return data.get(getPrimeHash(word));
+    private synchronized void internalAddWord(long hash, String word) {
+        if (data.containsKey(hash)) {
+            data.get(hash).add(word);
+        } else {
+            List<String> list = new LinkedList<>();
+            list.add(word);
+            data.put(hash, Collections.synchronizedList(list));
+        }
     }
 
     private static long getPrimeHash(String input) {
