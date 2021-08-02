@@ -1,12 +1,12 @@
-import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 public interface AnagramDictionaryService {
-    AnagramDictionary createDictionary(String filePath, Properties dict);
+    AnagramDictionary createDictionary(String filePath, Properties dict) throws AnagramDictionaryException;
 
     void addToDictionary(String word);
 
-    List<String> getAnagrams(String word);
-    
-    List<String> getAnagrams(long hash);
+    Set<String> getAnagrams(String word);
+
+    Set<String> getAnagrams(long hash);
 }

@@ -1,9 +1,8 @@
+import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.InputStream;
+import java.util.*;
 
 public class QuickSolution {
     private static final List<Integer> primes = generatePrimes();
@@ -15,8 +14,8 @@ public class QuickSolution {
             throw new IllegalArgumentException("Dictionary.java file name missing! " +
                     "Provide absolute path of the dictionary file as the only argument.");
         }
-        Map<Long, List<String>> anagrams = new HashMap<>();
-        try (FileInputStream fis = new FileInputStream(args[0])) {
+        Map<Long, Set<String>> anagrams = new HashMap<>();
+        try (InputStream fis = new BufferedInputStream(new FileInputStream(args[0]))) {
             int c;
             long product = 1;   // this will be the prime key
             StringBuilder currentWord = new StringBuilder();
@@ -26,9 +25,9 @@ public class QuickSolution {
                     if (anagrams.containsKey(product)) {
                         anagrams.get(product).add(currentWord.toString());
                     } else {
-                        List<String> anagramList = new ArrayList<>();
-                        anagramList.add(currentWord.toString());
-                        anagrams.put(product, anagramList);
+                        Set<String> anagramSet = new HashSet<>();
+                        anagramSet.add(currentWord.toString());
+                        anagrams.put(product, anagramSet);
                     }
                     currentWord.setLength(0);
                     product = 1;
@@ -44,17 +43,17 @@ public class QuickSolution {
             }
         }
         long duration = System.currentTimeMillis() - startTime;
-        System.out.println("Dictionary.java loaded in " + duration + "ms.");
+        System.out.println("Dictionary loaded in " + duration + "ms.");
         while (true) {
             System.out.print("Anagrams>");
             String word = System.console().readLine();
             if (EXIT_WORD.equalsIgnoreCase(word)) return;
             startTime = System.currentTimeMillis();
             long hash = getPrimeHash(word);
-            List<String> anagramList = anagrams.get(hash);
+            Set<String> anagramSet = anagrams.get(hash);
             duration = System.currentTimeMillis() - startTime;
-            if (anagramList != null && anagramList.size() > 1) {
-                System.out.println(anagramList.size() + " Anagrams found for " + word + " in " + duration + "ms");
+            if (anagramSet != null && anagramSet.size() > 1) {
+                System.out.println(anagramSet.size() + " Anagrams found for " + word + " in " + duration + "ms");
                 System.out.println(String.join(",", anagrams.get(hash)));
             } else {
                 System.out.println("No Anagrams found for " + word + " in " + duration + "ms");

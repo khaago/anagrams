@@ -3,29 +3,31 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class AnagramDictionaryServiceImpl implements AnagramDictionaryService {
-    private static final ConcurrentHashMap<Long, List<String>> data = new ConcurrentHashMap<>();
+    private final Map<Long, Set<String>> data;
     private static final List<Integer> primes = generatePrimes();
 
     private final MetricService metricService;
 
     public AnagramDictionaryServiceImpl() {
+        this.data = new HashMap<>();
         this.metricService = new MetricServiceImpl();
     }
 
-    public AnagramDictionary createDictionary(String filePath, Properties dict) {
+    public AnagramDictionary createDictionary(String filePath, Properties props) throws AnagramDictionaryException {
         metricService.logStartTime();
+        if (props == null) props = new Properties();
         try {
             loadDictionary(filePath);
         } catch (IOException e) {
-            e.printStackTrace(); //TODO
+            System.err.println("Error! Could not load Dictionary. Exiting...");
+            throw new AnagramDictionaryException("could not load dictionary", e);
         }
         AnagramDictionary anagramDictionary = new AnagramDictionary();
         String id = UUID.randomUUID().toString();
         anagramDictionary.setId(id);
-        anagramDictionary.setName(dict.getOrDefault("dictionary.name", "dictionary-" + id).toString());
+        anagramDictionary.setName(props.getOrDefault("dictionary.name", "dictionary-" + id).toString());
         metricService.logEndTime();
         metricService.printDuration("Dictionary loaded in");
         return anagramDictionary;
@@ -36,11 +38,11 @@ public class AnagramDictionaryServiceImpl implements AnagramDictionaryService {
         internalAddWord(hash, word);
     }
 
-    public List<String> getAnagrams(String word) {
+    public Set<String> getAnagrams(String word) {
         return getAnagrams(getPrimeHash(word));
     }
 
-    public List<String> getAnagrams(long hash) {
+    public Set<String> getAnagrams(long hash) {
         return data.get(hash);
     }
 
@@ -71,16 +73,18 @@ public class AnagramDictionaryServiceImpl implements AnagramDictionaryService {
         }
     }
 
-    private synchronized void internalAddWord(long hash, String word) {
+    // adds the word to the set keyed with the hash.
+    private void internalAddWord(long hash, String word) {
         if (data.containsKey(hash)) {
             data.get(hash).add(word);
         } else {
-            List<String> list = new LinkedList<>();
-            list.add(word);
-            data.put(hash, Collections.synchronizedList(list));
+            Set<String> anagramSet = new HashSet<>();
+            anagramSet.add(word);
+            data.put(hash, anagramSet);
         }
     }
 
+    // hashes the input word as a product of its prime mappings
     private static long getPrimeHash(String input) {
         long hash = 1L;
         for (char ch : input.toCharArray()) {
@@ -92,6 +96,7 @@ public class AnagramDictionaryServiceImpl implements AnagramDictionaryService {
         return hash;
     }
 
+    // generates first 26 primes
     private static List<Integer> generatePrimes() {
         boolean[] primes = new boolean[102];
 

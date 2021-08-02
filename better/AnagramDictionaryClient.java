@@ -1,5 +1,5 @@
-import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 
 public class AnagramDictionaryClient {
     private final static String EXIT_WORD = "exit";
@@ -19,10 +19,10 @@ public class AnagramDictionaryClient {
             String word = System.console().readLine();
             if (EXIT_WORD.equalsIgnoreCase(word)) return;
             metricService.logStartTime();
-            List<String> anagramList = service.getAnagrams(word);
+            Set<String> anagramSet = service.getAnagrams(word);
             metricService.logEndTime();
-            if (anagramList != null && anagramList.size() > 1) {
-                metricService.printDuration(anagramList.size() + " Anagrams found for " + word + " in ");
+            if (anagramSet != null && anagramSet.size() > 1) {
+                metricService.printDuration(anagramSet.size() + " Anagrams found for " + word + " in ");
                 System.out.println(String.join(",", service.getAnagrams(word)));
             } else {
                 metricService.printDuration("No Anagrams found for " + word + " in ");
